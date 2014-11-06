@@ -1,0 +1,60 @@
+<link rel="import" href="../bower_components/core-ajax/core-ajax.html">
+
+<polymer-element name="nextbus-api" attributes="stops busPredictions">
+  <template>
+      <core-ajax id='predictions' auto url='{{ fullUrl }}'
+      on-core-response="{{ handlePredictionResponse }}"
+      handleAs='xml'></core-ajax>
+      {{ stopsList }}
+    </template>
+  </template>
+  <script>
+    Polymer({
+      API_URL: "http://webservices.nextbus.com/service/publicXMLFeed",
+      agency: "sf-muni",
+      created: function() {
+        this.busPredictions = {};
+        this.stops =  [{
+          "routeTag": "1",
+          "stopTag": "4026"
+        }, {
+          "routeTag": "12",
+          "stopTag": "5846"
+        }];
+        this.stopsChanged(null, this.stops);
+      },
+      ready: function() {
+
+      },
+      stopsChanged: function(oldVal, newVal) {
+        var urlParams = "command=predictionsForMultiStops&a=" + this.agency;
+        for (var i = 0; i < newVal.length; i++) {
+          var stop = newVal[i];
+          urlParams += "&stops=" + stop.routeTag + "|" + stop.stopTag;
+        }
+        this.fullUrl = this.API_URL + "?" + urlParams;
+      },
+      handlePredictionResponse: function(event, xmlData) {
+        var xmlResponse = xmlData.response;
+
+        var predictionsNodes = xmlResponse.getElementsByTagName("predictions");
+        var predictions = {};
+        for (var i = 0; i < predictionsNodes.length; i++) {
+          var currPredictionsNode = predictionsNodes[i];
+          var predictionTitle = currPredictionsNode.attributes["routeTitle"].value + ", " + currPredictionsNode.attributes["stopTitle"].value;
+          var predictionValues = [];
+
+          var predictionNodes = currPredictionsNode.getElementsByTagName("prediction");
+          for (var j = 0; j < predictionNodes.length; j++) {
+            var currPredictionNode = predictionNodes[j];
+            predictionValues.push(currPredictionNode.attributes["seconds"]);
+          }
+
+          predictions[predictionTitle] = predictionValues;
+        }
+
+        this.busPredictions = predictions;
+      }
+    })
+  </script>
+</polymer-element>
